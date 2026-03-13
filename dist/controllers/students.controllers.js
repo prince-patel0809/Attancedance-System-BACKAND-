@@ -39,7 +39,7 @@ const registerStudent = async (req, res) => {
             const token = (0, token_1.generateToken)(student.id);
             return res.status(200).json({
                 success: true,
-                message: "Login successful",
+                message: "Registration successful",
                 token,
                 student_id: student.id
             });
@@ -89,41 +89,65 @@ const registerStudent = async (req, res) => {
 exports.registerStudent = registerStudent;
 const loginStudent = async (req, res) => {
     try {
+        // =========================
         // 1️⃣ VALIDATION
+        // =========================
         const parsed = student_validation_1.loginStudentSchema.safeParse(req.body);
         if (!parsed.success) {
             return res.status(400).json({
+                success: false,
+                message: "Invalid login details provided",
                 errors: parsed.error.flatten().fieldErrors
             });
         }
         const { enrollment_no, device_id } = parsed.data;
+        // =========================
         // 2️⃣ FIND STUDENT
+        // =========================
         const result = await db_1.default.query(`SELECT * FROM students WHERE enrollment_no = $1`, [enrollment_no]);
         if (result.rows.length === 0) {
             return res.status(404).json({
-                message: "Student not found"
+                success: false,
+                message: "No student account found with this enrollment number"
             });
         }
         const student = result.rows[0];
-        // 3️⃣ DEVICE LOCK CHECK
+        // =========================
+        // 3️⃣ DEVICE CHECK
+        // =========================
         if (student.device_id !== device_id) {
             return res.status(403).json({
-                message: "Login denied: wrong device"
+                success: false,
+                message: "This account is already linked to another device. Please use your registered device to log in."
             });
         }
+        // =========================
         // 4️⃣ GENERATE TOKEN
+        // =========================
         const token = (0, token_1.generateToken)(student.id);
-        // 5️⃣ RESPONSE
+        // =========================
+        // 5️⃣ SUCCESS RESPONSE
+        // =========================
         return res.status(200).json({
             success: true,
+            message: "Login successful",
             token,
             student_id: student.id
         });
     }
     catch (error) {
-        console.error(error);
+        console.error("Login Error:", error);
+        // Database connection error
+        if (error.code === "ECONNREFUSED") {
+            return res.status(500).json({
+                success: false,
+                message: "Unable to connect to the database. Please try again later."
+            });
+        }
+        // Unknown server error
         return res.status(500).json({
-            message: "Server error"
+            success: false,
+            message: "An unexpected error occurred while processing your login request."
         });
     }
 };
