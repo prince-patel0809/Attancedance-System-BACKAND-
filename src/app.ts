@@ -5,6 +5,9 @@ import cookieParser from "cookie-parser";
 
 import studentRoutes from "./routes/student.routes";
 import FacultyRoutes from "./routes/facualty.routes";
+import Subjectrouter from "./routes/subjects.routes";
+import Lecturerouter from "./routes/lecture.routes";
+import Attandancerouter from "./routes/attendance.routes";
 
 const app = express();
 
@@ -26,6 +29,16 @@ app.use("/student", studentRoutes);
 // Facualty Routes
 app.use("/faculty", FacultyRoutes);
 
+
+// Subjects Routes
+app.use("/subjects", Subjectrouter);
+
+
+// Lecture Routes
+app.use("/lectures", Lecturerouter);
+
+// Attendance Routes
+app.use("/attendance", Attandancerouter);
 
 // HEALTH CHECK ROUTE
 

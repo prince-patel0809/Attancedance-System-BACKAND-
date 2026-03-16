@@ -44,7 +44,7 @@ export const registerStudent = async (req: Request, res: Response) => {
             }
 
             // Same device → allow login
-            const token = generateToken(student.id);
+            const token = generateToken(student.id, "student");
 
             return res.status(200).json({
                 success: true,
@@ -82,7 +82,7 @@ export const registerStudent = async (req: Request, res: Response) => {
 
         const studentId = result.rows[0].id;
 
-        const token = generateToken(studentId);
+        const token = generateToken(studentId.id, "student");
 
         return res.status(201).json({
             success: true,
@@ -163,7 +163,7 @@ export const loginStudent = async (req: Request, res: Response) => {
         // =========================
         // 4️⃣ GENERATE TOKEN
         // =========================
-        const token = generateToken(student.id);
+        const token = generateToken(student.id, "student");
 
         // =========================
         // 5️⃣ SUCCESS RESPONSE

@@ -48,7 +48,7 @@ export const registerFaculty = async (req: Request, res: Response) => {
 
         const facultyId = result.rows[0].id;
 
-        const token = generateToken(facultyId);
+        const token = generateToken(facultyId.id, "faculty");
 
         return res.status(201).json({
             success: true,
@@ -114,7 +114,7 @@ export const loginFaculty = async (req: Request, res: Response) => {
             });
         }
 
-        const token = generateToken(faculty.id);
+        const token = generateToken(faculty.id, "faculty");
 
         return res.status(200).json({
             success: true,

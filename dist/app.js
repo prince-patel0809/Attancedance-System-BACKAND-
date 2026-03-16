@@ -9,6 +9,9 @@ const helmet_1 = __importDefault(require("helmet"));
 const cookie_parser_1 = __importDefault(require("cookie-parser"));
 const student_routes_1 = __importDefault(require("./routes/student.routes"));
 const facualty_routes_1 = __importDefault(require("./routes/facualty.routes"));
+const subjects_routes_1 = __importDefault(require("./routes/subjects.routes"));
+const lecture_routes_1 = __importDefault(require("./routes/lecture.routes"));
+const attendance_routes_1 = __importDefault(require("./routes/attendance.routes"));
 const app = (0, express_1.default)();
 // MIDDLEWARES
 app.use(express_1.default.json());
@@ -20,6 +23,12 @@ app.use((0, cookie_parser_1.default)());
 app.use("/student", student_routes_1.default);
 // Facualty Routes
 app.use("/faculty", facualty_routes_1.default);
+// Subjects Routes
+app.use("/subjects", subjects_routes_1.default);
+// Lecture Routes
+app.use("/lectures", lecture_routes_1.default);
+// Attendance Routes
+app.use("/attendance", attendance_routes_1.default);
 // HEALTH CHECK ROUTE
 app.get("/", (req, res) => {
     res.send("Attendance Backend Running 🚀");

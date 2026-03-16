@@ -36,7 +36,7 @@ const registerStudent = async (req, res) => {
                 });
             }
             // Same device → allow login
-            const token = (0, token_1.generateToken)(student.id);
+            const token = (0, token_1.generateToken)(student.id, "student");
             return res.status(200).json({
                 success: true,
                 message: "Registration successful",
@@ -61,7 +61,7 @@ const registerStudent = async (req, res) => {
        VALUES ($1,$2,$3)
        RETURNING id`, [name, enrollment_no, device_id]);
         const studentId = result.rows[0].id;
-        const token = (0, token_1.generateToken)(studentId);
+        const token = (0, token_1.generateToken)(studentId.id, "student");
         return res.status(201).json({
             success: true,
             message: "Registration completed successfully",
@@ -124,7 +124,7 @@ const loginStudent = async (req, res) => {
         // =========================
         // 4️⃣ GENERATE TOKEN
         // =========================
-        const token = (0, token_1.generateToken)(student.id);
+        const token = (0, token_1.generateToken)(student.id, "student");
         // =========================
         // 5️⃣ SUCCESS RESPONSE
         // =========================

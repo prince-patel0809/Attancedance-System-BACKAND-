@@ -36,7 +36,7 @@ const registerFaculty = async (req, res) => {
             VALUES ($1,$2,$3,$4)
             RETURNING id`, [name, email, hashedPassword, college_name]);
         const facultyId = result.rows[0].id;
-        const token = (0, token_1.generateToken)(facultyId);
+        const token = (0, token_1.generateToken)(facultyId.id, "faculty");
         return res.status(201).json({
             success: true,
             message: "Faculty registered successfully",
@@ -83,7 +83,7 @@ const loginFaculty = async (req, res) => {
                 message: "Invalid email or password"
             });
         }
-        const token = (0, token_1.generateToken)(faculty.id);
+        const token = (0, token_1.generateToken)(faculty.id, "faculty");
         return res.status(200).json({
             success: true,
             message: "Login successful",
