@@ -100,27 +100,32 @@ const getStudentDashboard = async (req, res) => {
     try {
         const studentId = req.user.id;
         const { latitude, longitude } = req.body;
-        // 1️⃣ Get active lecture
+        // 🔴 Validate location
+        if (!latitude || !longitude) {
+            return res.status(400).json({
+                success: false,
+                message: "Latitude and longitude are required"
+            });
+        }
+        // 1️⃣ Get ALL active lectures (REMOVE LIMIT 1)
         const lectureResult = await db_1.default.query(`
-      SELECT 
-        lecture_sessions.id,
-        lecture_sessions.latitude,
-        lecture_sessions.longitude,
-        lecture_sessions.radius,
-        subjects.subject_name,
-        faculty.name AS faculty_name
-      FROM lecture_sessions
-      JOIN subjects ON subjects.id = lecture_sessions.subject_id
-      JOIN faculty ON faculty.id = lecture_sessions.faculty_id
-      WHERE lecture_sessions.is_active = true
-      LIMIT 1
-      `);
+            SELECT 
+                lecture_sessions.id,
+                lecture_sessions.latitude,
+                lecture_sessions.longitude,
+                lecture_sessions.radius,
+                subjects.subject_name,
+                faculty.name AS faculty_name
+            FROM lecture_sessions
+            JOIN subjects ON subjects.id = lecture_sessions.subject_id
+            JOIN faculty ON faculty.id = lecture_sessions.faculty_id
+            WHERE lecture_sessions.is_active = true
+        `);
         let activeLecture = null;
-        if (lectureResult.rows.length > 0) {
-            const lecture = lectureResult.rows[0];
-            // 2️⃣ Calculate distance
+        // 2️⃣ Loop through lectures
+        for (const lecture of lectureResult.rows) {
             const distance = (0, geolib_1.getDistance)({ latitude: lecture.latitude, longitude: lecture.longitude }, { latitude, longitude });
-            // 3️⃣ Check range
+            console.log("Distance:", distance);
             if (distance <= lecture.radius) {
                 activeLecture = {
                     id: lecture.id,
@@ -128,24 +133,25 @@ const getStudentDashboard = async (req, res) => {
                     faculty_name: lecture.faculty_name,
                     distance
                 };
+                break; // stop when first valid lecture found
             }
         }
-        // 4️⃣ Attendance summary (same as before)
+        // 3️⃣ Attendance summary
         const summaryResult = await db_1.default.query(`
-      SELECT 
-        subjects.subject_name,
-        COUNT(attendance.id) AS attended
-      FROM attendance
-      JOIN lecture_sessions 
-        ON lecture_sessions.id = attendance.lecture_id
-      JOIN subjects 
-        ON subjects.id = lecture_sessions.subject_id
-      WHERE attendance.student_id = $1
-      GROUP BY subjects.subject_name
-      `, [studentId]);
+            SELECT 
+                subjects.subject_name,
+                COUNT(attendance.id) AS attended
+            FROM attendance
+            JOIN lecture_sessions 
+                ON lecture_sessions.id = attendance.lecture_id
+            JOIN subjects 
+                ON subjects.id = lecture_sessions.subject_id
+            WHERE attendance.student_id = $1
+            GROUP BY subjects.subject_name
+            `, [studentId]);
         return res.status(200).json({
             success: true,
-            active_lecture: activeLecture, // null if not in range
+            active_lecture: activeLecture,
             attendance_summary: summaryResult.rows.map(row => ({
                 subject_name: row.subject_name,
                 attended: Number(row.attended)
