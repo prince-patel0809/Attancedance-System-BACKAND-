@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.loginStudent = exports.registerStudent = void 0;
+exports.getStudentProfile = exports.loginStudent = exports.registerStudent = void 0;
 const student_validation_1 = require("../validations/student.validation");
 const student_validation_2 = require("../validations/student.validation");
 const db_1 = __importDefault(require("../config/db"));
@@ -152,3 +152,68 @@ const loginStudent = async (req, res) => {
     }
 };
 exports.loginStudent = loginStudent;
+const getStudentProfile = async (req, res) => {
+    try {
+        const studentId = req.user.id;
+        // 1️⃣ Get student info
+        const studentResult = await db_1.default.query(`SELECT name, enrollment_no, device_id
+       FROM students
+       WHERE id = $1`, [studentId]);
+        if (studentResult.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "Student not found"
+            });
+        }
+        const student = studentResult.rows[0];
+        // 2️⃣ Subject-wise attendance
+        const subjectResult = await db_1.default.query(`
+      SELECT 
+        subjects.id AS subject_id,
+        subjects.subject_name,
+        COUNT(attendance.id) AS attended
+      FROM attendance
+      JOIN lecture_sessions 
+        ON lecture_sessions.id = attendance.lecture_id
+      JOIN subjects 
+        ON subjects.id = lecture_sessions.subject_id
+      WHERE attendance.student_id = $1
+      GROUP BY subjects.id, subjects.subject_name
+      `, [studentId]);
+        const subjects = subjectResult.rows.map(row => ({
+            subject_id: row.subject_id,
+            subject_name: row.subject_name,
+            attended: Number(row.attended)
+        }));
+        // 3️⃣ Total attended lectures
+        const totalAttendedResult = await db_1.default.query(`SELECT COUNT(*) FROM attendance WHERE student_id = $1`, [studentId]);
+        const totalAttended = Number(totalAttendedResult.rows[0].count);
+        // 4️⃣ Total lectures in system
+        const totalLecturesResult = await db_1.default.query(`SELECT COUNT(*) FROM lecture_sessions`);
+        const totalLectures = Number(totalLecturesResult.rows[0].count);
+        // 5️⃣ Percentage
+        const percentage = totalLectures === 0
+            ? 0
+            : Math.round((totalAttended / totalLectures) * 100);
+        // 6️⃣ Total subjects
+        const totalSubjects = subjects.length;
+        return res.status(200).json({
+            success: true,
+            student,
+            attendance_overview: {
+                total_subjects: totalSubjects,
+                total_attended: totalAttended,
+                percentage
+            },
+            subjects
+        });
+    }
+    catch (error) {
+        console.error("Student Profile Error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to fetch profile"
+        });
+    }
+};
+exports.getStudentProfile = getStudentProfile;
