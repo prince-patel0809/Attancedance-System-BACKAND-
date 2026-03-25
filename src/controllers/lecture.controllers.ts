@@ -65,7 +65,6 @@ export const startLectureSession = async (req: Request, res: Response) => {
 
 
 
-
 export const endLectureSession = async (req: Request, res: Response) => {
     try {
         const { lecture_id } = req.params;
@@ -73,9 +72,9 @@ export const endLectureSession = async (req: Request, res: Response) => {
         // Get subject name
         const subjectResult = await pool.query(
             `SELECT subjects.subject_name
-       FROM lecture_sessions
-       JOIN subjects ON lecture_sessions.subject_id = subjects.id
-       WHERE lecture_sessions.id = $1`,
+             FROM lecture_sessions
+             JOIN subjects ON lecture_sessions.subject_id = subjects.id
+             WHERE lecture_sessions.id = $1`,
             [lecture_id]
         );
 
@@ -84,14 +83,14 @@ export const endLectureSession = async (req: Request, res: Response) => {
         // Get attendance data
         const attendance = await pool.query(
             `SELECT 
-        students.enrollment_no,
-        students.name,
-        attendance.distance,
-        attendance.status,
-        attendance.marked_at
-       FROM attendance
-       JOIN students ON students.id = attendance.student_id
-       WHERE attendance.lecture_id = $1`,
+                students.enrollment_no,
+                students.name,
+                attendance.distance,
+                attendance.status,
+                attendance.marked_at
+             FROM attendance
+             JOIN students ON students.id = attendance.student_id
+             WHERE attendance.lecture_id = $1`,
             [lecture_id]
         );
 
@@ -123,7 +122,14 @@ export const endLectureSession = async (req: Request, res: Response) => {
             `attachment; filename=${fileName}`
         );
 
+        // Send Excel file
         await workbook.xlsx.write(res);
+
+        // ✅ DELETE lecture session AFTER file is written
+        await pool.query(
+            `DELETE FROM lecture_sessions WHERE id = $1`,
+            [lecture_id]
+        );
 
         res.end(); // VERY IMPORTANT
     } catch (error) {
