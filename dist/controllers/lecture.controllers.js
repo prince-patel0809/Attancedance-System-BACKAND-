@@ -55,20 +55,20 @@ const endLectureSession = async (req, res) => {
         const { lecture_id } = req.params;
         // Get subject name
         const subjectResult = await db_1.default.query(`SELECT subjects.subject_name
-       FROM lecture_sessions
-       JOIN subjects ON lecture_sessions.subject_id = subjects.id
-       WHERE lecture_sessions.id = $1`, [lecture_id]);
+             FROM lecture_sessions
+             JOIN subjects ON lecture_sessions.subject_id = subjects.id
+             WHERE lecture_sessions.id = $1`, [lecture_id]);
         const subjectName = subjectResult.rows[0].subject_name;
         // Get attendance data
         const attendance = await db_1.default.query(`SELECT 
-        students.enrollment_no,
-        students.name,
-        attendance.distance,
-        attendance.status,
-        attendance.marked_at
-       FROM attendance
-       JOIN students ON students.id = attendance.student_id
-       WHERE attendance.lecture_id = $1`, [lecture_id]);
+                students.enrollment_no,
+                students.name,
+                attendance.distance,
+                attendance.status,
+                attendance.marked_at
+             FROM attendance
+             JOIN students ON students.id = attendance.student_id
+             WHERE attendance.lecture_id = $1`, [lecture_id]);
         const workbook = new exceljs_1.default.Workbook();
         const worksheet = workbook.addWorksheet("Attendance");
         worksheet.columns = [
@@ -84,7 +84,10 @@ const endLectureSession = async (req, res) => {
         const fileName = subjectName.replace(/\s+/g, "_") + "_Attendance.xlsx";
         res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
         res.setHeader("Content-Disposition", `attachment; filename=${fileName}`);
+        // Send Excel file
         await workbook.xlsx.write(res);
+        // ✅ DELETE lecture session AFTER file is written
+        await db_1.default.query(`DELETE FROM lecture_sessions WHERE id = $1`, [lecture_id]);
         res.end(); // VERY IMPORTANT
     }
     catch (error) {
