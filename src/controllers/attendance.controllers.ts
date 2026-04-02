@@ -76,12 +76,25 @@ export const markAttendance = async (req: Request, res: Response) => {
         // 7️⃣ Insert attendance
         const result = await pool.query(
             `INSERT INTO attendance
-            (lecture_id, student_id, student_latitude, student_longitude, distance)
-            VALUES ($1,$2,$3,$4,$5)
-      RETURNING *`,
-            [lecture_id, studentId, latitude, longitude, distance]
+            (lecture_id,
+            student_id,
+            student_latitude,
+            student_longitude,
+            distance,
+            subject_name,
+            faculty_name)
+            VALUES ($1,$2,$3,$4,$5,$6,$7)
+            RETURNING *`,
+            [
+                lecture_id,
+                studentId,
+                latitude,
+                longitude,
+                distance,
+                lecture.subject_name,   // ✅ snapshot
+                lecture.faculty_name    // ✅ snapshot
+            ]
         );
-
         return res.status(201).json({
             success: true,
             message: "Attendance marked successfully",
