@@ -5,7 +5,6 @@ import { markAttendanceSchema } from "../validations/attendance.validation";
 
 export const markAttendance = async (req: Request, res: Response) => {
     try {
-
         // 1️⃣ Validate request
         const parsed = markAttendanceSchema.safeParse(req.body);
 
@@ -13,15 +12,21 @@ export const markAttendance = async (req: Request, res: Response) => {
             return res.status(400).json({
                 success: false,
                 message: "Invalid attendance data",
-                errors: parsed.error.flatten().fieldErrors
+                errors: parsed.error.flatten().fieldErrors,
             });
         }
 
-        const { lecture_id, latitude, longitude } = parsed.data;
+        const {
+            lecture_id,
+            latitude,
+            longitude,
+            subject_name,
+            faculty_name,
+        } = parsed.data;
 
         const studentId = (req.user as { id: string }).id;
 
-        // 2️⃣ Check lecture session
+        // 2️⃣ Check lecture exists
         const lectureResult = await pool.query(
             `SELECT * FROM lecture_sessions WHERE id = $1`,
             [lecture_id]
@@ -30,7 +35,7 @@ export const markAttendance = async (req: Request, res: Response) => {
         if (lectureResult.rows.length === 0) {
             return res.status(404).json({
                 success: false,
-                message: "Lecture session not found"
+                message: "Lecture session not found",
             });
         }
 
@@ -40,82 +45,89 @@ export const markAttendance = async (req: Request, res: Response) => {
         if (!lecture.is_active) {
             return res.status(403).json({
                 success: false,
-                message: "Attendance session has ended"
+                message: "Attendance session has ended",
             });
         }
 
-        // 4️⃣ Check duplicate attendance
+        // 4️⃣ Prevent duplicate
         const existing = await pool.query(
-            `SELECT * FROM attendance 
-            WHERE lecture_id = $1 AND student_id = $2`,
+            `SELECT 1 FROM attendance 
+       WHERE lecture_id = $1 AND student_id = $2`,
             [lecture_id, studentId]
         );
 
         if (existing.rows.length > 0) {
             return res.status(409).json({
                 success: false,
-                message: "Attendance already marked"
+                message: "Attendance already marked",
             });
         }
 
-        // 5️⃣ Calculate distance
+        // 5️⃣ Distance check
         const distance = getDistance(
             { latitude: lecture.latitude, longitude: lecture.longitude },
             { latitude, longitude }
         );
 
-        // 6️⃣ Check distance
         if (distance > lecture.radius) {
             return res.status(403).json({
                 success: false,
-                message: `You must be within ${lecture.radius} meters of the lecture location`,
-                distance
+                message: `You must be within ${lecture.radius} meters`,
+                distance,
             });
         }
 
-        // 7️⃣ Insert attendance
+        // 6️⃣ Insert attendance ✅ (USING FRONTEND DATA)
         const result = await pool.query(
             `INSERT INTO attendance
-            (lecture_id,
-            student_id,
-            student_latitude,
-            student_longitude,
-            distance,
-            subject_name,
-            faculty_name)
-            VALUES ($1,$2,$3,$4,$5,$6,$7)
-            RETURNING *`,
+      (lecture_id,
+       student_id,
+       student_latitude,
+       student_longitude,
+       distance,
+       subject_name,
+       faculty_name,
+       status)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+      RETURNING *`,
             [
                 lecture_id,
                 studentId,
                 latitude,
                 longitude,
                 distance,
-                lecture.subject_name,   // ✅ snapshot
-                lecture.faculty_name    // ✅ snapshot
+                subject_name,   // ✅ FROM FRONTEND
+                faculty_name,   // ✅ FROM FRONTEND
+                "present",
             ]
         );
+
         return res.status(201).json({
             success: true,
             message: "Attendance marked successfully",
-            attendance: result.rows[0]
+            attendance: result.rows[0],
         });
 
     } catch (error: any) {
-
         console.error("Attendance Error:", error);
 
-        // Duplicate constraint safety
+        if (error.code === "23502") {
+            return res.status(400).json({
+                success: false,
+                message: "Missing required fields (subject_name or faculty_name)",
+            });
+        }
+
         if (error.code === "23505") {
             return res.status(409).json({
                 success: false,
-                message: "Attendance already recorded"
+                message: "Attendance already recorded",
             });
         }
 
         return res.status(500).json({
             success: false,
-            message: "Server error while marking attendance"
+            message: "Server error while marking attendance",
         });
     }
 };
