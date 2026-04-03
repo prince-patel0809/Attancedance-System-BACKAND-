@@ -173,9 +173,8 @@ export const getStudentDashboard = async (req: Request, res: Response) => {
             WHERE lecture_sessions.is_active = true
         `);
 
-        let activeLecture = null;
+        let activeLectures: any[] = [];
 
-        // 2️⃣ Loop through lectures
         for (const lecture of lectureResult.rows) {
 
             const distance = getDistance(
@@ -183,16 +182,13 @@ export const getStudentDashboard = async (req: Request, res: Response) => {
                 { latitude, longitude }
             );
 
-            console.log("Distance:", distance);
-
             if (distance <= lecture.radius) {
-                activeLecture = {
+                activeLectures.push({
                     id: lecture.id,
                     subject_name: lecture.subject_name,
                     faculty_name: lecture.faculty_name,
                     distance
-                };
-                break; // stop when first valid lecture found
+                });
             }
         }
 
@@ -215,7 +211,7 @@ export const getStudentDashboard = async (req: Request, res: Response) => {
 
         return res.status(200).json({
             success: true,
-            active_lecture: activeLecture,
+            active_lectures: activeLectures, // ✅ ARRAY
             attendance_summary: summaryResult.rows.map(row => ({
                 subject_name: row.subject_name,
                 attended: Number(row.attended)
