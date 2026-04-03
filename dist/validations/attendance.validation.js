@@ -5,5 +5,7 @@ const zod_1 = require("zod");
 exports.markAttendanceSchema = zod_1.z.object({
     lecture_id: zod_1.z.string(),
     latitude: zod_1.z.coerce.number().min(-90).max(90),
-    longitude: zod_1.z.coerce.number().min(-180).max(180)
+    longitude: zod_1.z.coerce.number().min(-180).max(180),
+    subject_name: zod_1.z.string(),
+    faculty_name: zod_1.z.string(),
 });

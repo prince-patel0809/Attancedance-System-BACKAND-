@@ -124,19 +124,16 @@ const getStudentDashboard = async (req, res) => {
             JOIN faculty ON faculty.id = lecture_sessions.faculty_id
             WHERE lecture_sessions.is_active = true
         `);
-        let activeLecture = null;
-        // 2️⃣ Loop through lectures
+        let activeLectures = [];
         for (const lecture of lectureResult.rows) {
             const distance = (0, geolib_1.getDistance)({ latitude: lecture.latitude, longitude: lecture.longitude }, { latitude, longitude });
-            console.log("Distance:", distance);
             if (distance <= lecture.radius) {
-                activeLecture = {
+                activeLectures.push({
                     id: lecture.id,
                     subject_name: lecture.subject_name,
                     faculty_name: lecture.faculty_name,
                     distance
-                };
-                break; // stop when first valid lecture found
+                });
             }
         }
         // 3️⃣ Attendance summary
@@ -154,7 +151,7 @@ const getStudentDashboard = async (req, res) => {
             `, [studentId]);
         return res.status(200).json({
             success: true,
-            active_lecture: activeLecture,
+            active_lectures: activeLectures, // ✅ ARRAY
             attendance_summary: summaryResult.rows.map(row => ({
                 subject_name: row.subject_name,
                 attended: Number(row.attended)

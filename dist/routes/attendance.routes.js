@@ -8,4 +8,5 @@ const studentsAuth_1 = require("../middlewares/studentsAuth");
 const attendance_controllers_1 = require("../controllers/attendance.controllers");
 const Attandancerouter = express_1.default.Router();
 Attandancerouter.post("/mark", studentsAuth_1.studentAuth, attendance_controllers_1.markAttendance);
+Attandancerouter.get("/history", studentsAuth_1.studentAuth, attendance_controllers_1.downloadAttendanceHistory);
 exports.default = Attandancerouter;

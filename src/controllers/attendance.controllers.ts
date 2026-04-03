@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import pool from "../config/db";
 import { getDistance } from "geolib";
 import { markAttendanceSchema } from "../validations/attendance.validation";
+import ExcelJS from "exceljs";
 
 export const markAttendance = async (req: Request, res: Response) => {
     try {
@@ -128,6 +129,105 @@ export const markAttendance = async (req: Request, res: Response) => {
         return res.status(500).json({
             success: false,
             message: "Server error while marking attendance",
+        });
+    }
+};
+
+
+
+// attandance history for student
+export const downloadAttendanceHistory = async (req: Request, res: Response) => {
+    try {
+
+        // 🔐 Check user
+        if (!req.user) {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized"
+            });
+        }
+
+        const studentId = (req.user as { id: string }).id;
+
+        // 1️⃣ Fetch attendance history
+        const result = await pool.query(
+            `
+      SELECT 
+        subject_name,
+        faculty_name,
+        status,
+        distance,
+        marked_at
+      FROM attendance
+      WHERE student_id = $1
+      ORDER BY marked_at DESC
+      `,
+            [studentId]
+        );
+
+        // 2️⃣ Create workbook
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet("Attendance History");
+
+        // 3️⃣ Add title row (optional but professional)
+        worksheet.mergeCells("A1:E1");
+        worksheet.getCell("A1").value = "Student Attendance History";
+        worksheet.getCell("A1").font = { bold: true, size: 16 };
+
+        // 4️⃣ Add header
+        worksheet.columns = [
+            { header: "Subject", key: "subject_name", width: 25 },
+            { header: "Faculty", key: "faculty_name", width: 25 },
+            { header: "Status", key: "status", width: 15 },
+            { header: "Distance (m)", key: "distance", width: 15 },
+            { header: "Date & Time", key: "marked_at", width: 25 }
+        ];
+
+        worksheet.getRow(2).font = { bold: true };
+
+        // 5️⃣ Add data
+        result.rows.forEach((row: any) => {
+
+            const formattedTime = new Date(row.marked_at).toLocaleString("en-IN", {
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit"
+            });
+
+            worksheet.addRow({
+                subject_name: row.subject_name,
+                faculty_name: row.faculty_name,
+                status: row.status,
+                distance: row.distance,
+                marked_at: formattedTime
+            });
+
+        });
+
+        // 6️⃣ Auto download headers
+        res.setHeader(
+            "Content-Type",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        );
+
+        res.setHeader(
+            "Content-Disposition",
+            "attachment; filename=Attendance_History.xlsx"
+        );
+
+        // 7️⃣ Send file
+        await workbook.xlsx.write(res);
+        res.end();
+
+    } catch (error) {
+
+        console.error("Attendance History Excel Error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Failed to generate attendance history file"
         });
     }
 };
