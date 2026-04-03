@@ -9,4 +9,5 @@ const attendance_controllers_1 = require("../controllers/attendance.controllers"
 const Attandancerouter = express_1.default.Router();
 Attandancerouter.post("/mark", studentsAuth_1.studentAuth, attendance_controllers_1.markAttendance);
 Attandancerouter.get("/history/excel", studentsAuth_1.studentAuth, attendance_controllers_1.downloadAttendanceHistory);
+Attandancerouter.get("/history/30days", studentsAuth_1.studentAuth, attendance_controllers_1.getLast30DaysAttendance);
 exports.default = Attandancerouter;

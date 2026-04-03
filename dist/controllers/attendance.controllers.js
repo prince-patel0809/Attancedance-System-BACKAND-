@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.downloadAttendanceHistory = exports.markAttendance = void 0;
+exports.getLast30DaysAttendance = exports.downloadAttendanceHistory = exports.markAttendance = void 0;
 const db_1 = __importDefault(require("../config/db"));
 const geolib_1 = require("geolib");
 const attendance_validation_1 = require("../validations/attendance.validation");
@@ -213,3 +213,56 @@ const downloadAttendanceHistory = async (req, res) => {
     }
 };
 exports.downloadAttendanceHistory = downloadAttendanceHistory;
+// last 30 days history
+const getLast30DaysAttendance = async (req, res) => {
+    try {
+        // ===============================
+        // 🔐 AUTH CHECK
+        // ===============================
+        if (!req.user) {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized"
+            });
+        }
+        const studentId = req.user.id;
+        // ===============================
+        // 📅 FETCH LAST 30 DAYS DATA
+        // ===============================
+        const result = await db_1.default.query(`
+      SELECT 
+        subject_name,
+        faculty_name,
+        status,
+        distance,
+        marked_at
+      FROM attendance
+      WHERE student_id = $1
+      AND marked_at >= NOW() - INTERVAL '30 days'
+      ORDER BY marked_at DESC
+      `, [studentId]);
+        // ===============================
+        // 📊 FORMAT RESPONSE
+        // ===============================
+        const history = result.rows.map((row) => ({
+            subject_name: row.subject_name,
+            faculty_name: row.faculty_name,
+            status: row.status,
+            distance: row.distance,
+            marked_at: row.marked_at
+        }));
+        return res.status(200).json({
+            success: true,
+            count: history.length,
+            history
+        });
+    }
+    catch (error) {
+        console.error("Last 30 Days Attendance Error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to fetch attendance history"
+        });
+    }
+};
+exports.getLast30DaysAttendance = getLast30DaysAttendance;

@@ -271,3 +271,68 @@ export const downloadAttendanceHistory = async (req: Request, res: Response) => 
         });
     }
 };
+
+
+
+// last 30 days history
+export const getLast30DaysAttendance = async (req: Request, res: Response) => {
+    try {
+
+        // ===============================
+        // 🔐 AUTH CHECK
+        // ===============================
+        if (!req.user) {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized"
+            });
+        }
+
+        const studentId = (req.user as { id: string }).id;
+
+        // ===============================
+        // 📅 FETCH LAST 30 DAYS DATA
+        // ===============================
+        const result = await pool.query(
+            `
+      SELECT 
+        subject_name,
+        faculty_name,
+        status,
+        distance,
+        marked_at
+      FROM attendance
+      WHERE student_id = $1
+      AND marked_at >= NOW() - INTERVAL '30 days'
+      ORDER BY marked_at DESC
+      `,
+            [studentId]
+        );
+
+        // ===============================
+        // 📊 FORMAT RESPONSE
+        // ===============================
+        const history = result.rows.map((row: any) => ({
+            subject_name: row.subject_name,
+            faculty_name: row.faculty_name,
+            status: row.status,
+            distance: row.distance,
+            marked_at: row.marked_at
+        }));
+
+        return res.status(200).json({
+            success: true,
+            count: history.length,
+            history
+        });
+
+    } catch (error) {
+
+        console.error("Last 30 Days Attendance Error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Failed to fetch attendance history"
+        });
+    }
+};
