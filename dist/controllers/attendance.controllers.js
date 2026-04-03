@@ -106,7 +106,9 @@ exports.markAttendance = markAttendance;
 // attandance history for student
 const downloadAttendanceHistory = async (req, res) => {
     try {
-        // 🔐 Check user
+        // ===============================
+        // 🔐 AUTH CHECK
+        // ===============================
         if (!req.user) {
             return res.status(401).json({
                 success: false,
@@ -114,7 +116,9 @@ const downloadAttendanceHistory = async (req, res) => {
             });
         }
         const studentId = req.user.id;
-        // 1️⃣ Fetch attendance history
+        // ===============================
+        // 📊 FETCH DATA
+        // ===============================
         const result = await db_1.default.query(`
       SELECT 
         subject_name,
@@ -126,23 +130,33 @@ const downloadAttendanceHistory = async (req, res) => {
       WHERE student_id = $1
       ORDER BY marked_at DESC
       `, [studentId]);
-        // 2️⃣ Create workbook
+        // ===============================
+        // 📄 CREATE EXCEL
+        // ===============================
         const workbook = new exceljs_1.default.Workbook();
         const worksheet = workbook.addWorksheet("Attendance History");
-        // 3️⃣ Add title row (optional but professional)
+        // ===============================
+        // 🏷️ TITLE
+        // ===============================
         worksheet.mergeCells("A1:E1");
-        worksheet.getCell("A1").value = "Student Attendance History";
-        worksheet.getCell("A1").font = { bold: true, size: 16 };
-        // 4️⃣ Add header
-        worksheet.columns = [
-            { header: "Subject", key: "subject_name", width: 25 },
-            { header: "Faculty", key: "faculty_name", width: 25 },
-            { header: "Status", key: "status", width: 15 },
-            { header: "Distance (m)", key: "distance", width: 15 },
-            { header: "Date & Time", key: "marked_at", width: 25 }
+        const titleCell = worksheet.getCell("A1");
+        titleCell.value = "Student Attendance History";
+        titleCell.font = { size: 16, bold: true };
+        titleCell.alignment = { horizontal: "center" };
+        // ===============================
+        // 📌 HEADER ROW
+        // ===============================
+        worksheet.getRow(2).values = [
+            "Subject",
+            "Faculty",
+            "Status",
+            "Distance (m)",
+            "Date & Time"
         ];
         worksheet.getRow(2).font = { bold: true };
-        // 5️⃣ Add data
+        // ===============================
+        // 📊 ADD DATA (START FROM ROW 3)
+        // ===============================
         result.rows.forEach((row) => {
             const formattedTime = new Date(row.marked_at).toLocaleString("en-IN", {
                 day: "2-digit",
@@ -151,26 +165,50 @@ const downloadAttendanceHistory = async (req, res) => {
                 hour: "2-digit",
                 minute: "2-digit"
             });
-            worksheet.addRow({
-                subject_name: row.subject_name,
-                faculty_name: row.faculty_name,
-                status: row.status,
-                distance: row.distance,
-                marked_at: formattedTime
+            worksheet.addRow([
+                row.subject_name,
+                row.faculty_name,
+                row.status,
+                row.distance,
+                formattedTime
+            ]);
+        });
+        // ===============================
+        // 🎨 COLUMN WIDTH
+        // ===============================
+        worksheet.columns = [
+            { width: 25 },
+            { width: 25 },
+            { width: 15 },
+            { width: 15 },
+            { width: 25 }
+        ];
+        // ===============================
+        // 🎨 BORDER STYLE
+        // ===============================
+        worksheet.eachRow((row) => {
+            row.eachCell((cell) => {
+                cell.border = {
+                    top: { style: "thin" },
+                    left: { style: "thin" },
+                    bottom: { style: "thin" },
+                    right: { style: "thin" }
+                };
             });
         });
-        // 6️⃣ Auto download headers
+        // ===============================
+        // 📥 DOWNLOAD RESPONSE
+        // ===============================
         res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
         res.setHeader("Content-Disposition", "attachment; filename=Attendance_History.xlsx");
-        // 7️⃣ Send file
         await workbook.xlsx.write(res);
         res.end();
     }
     catch (error) {
-        console.error("Attendance History Excel Error:", error);
+        console.error("Excel Error:", error);
         return res.status(500).json({
             success: false,
-            message: "Failed to generate attendance history file"
+            message: "Failed to generate attendance Excel"
         });
     }
 };

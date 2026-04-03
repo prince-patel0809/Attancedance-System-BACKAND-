@@ -7,6 +7,6 @@ const Attandancerouter = express.Router();
 
 Attandancerouter.post("/mark", studentAuth, markAttendance);
 
-Attandancerouter.get("/history", studentAuth, downloadAttendanceHistory);
+Attandancerouter.get("/history/excel", studentAuth, downloadAttendanceHistory);
 
 export default Attandancerouter;
