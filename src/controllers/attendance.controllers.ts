@@ -3,7 +3,6 @@ import pool from "../config/db";
 import { getDistance } from "geolib";
 import { markAttendanceSchema } from "../validations/attendance.validation";
 import ExcelJS from "exceljs";
-import { io } from "../server";
 
 export const markAttendance = async (req: Request, res: Response) => {
     try {
@@ -82,35 +81,28 @@ export const markAttendance = async (req: Request, res: Response) => {
         // 6️⃣ Insert attendance ✅ (USING FRONTEND DATA)
         const result = await pool.query(
             `INSERT INTO attendance
-    (lecture_id,
-     student_id,
-     student_latitude,
-     student_longitude,
-     distance,
-     subject_name,
-     faculty_name,
-     status)
-    VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-    RETURNING *`,
+      (lecture_id,
+       student_id,
+       student_latitude,
+       student_longitude,
+       distance,
+       subject_name,
+       faculty_name,
+       status)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+      RETURNING *`,
             [
                 lecture_id,
                 studentId,
                 latitude,
                 longitude,
                 distance,
-                subject_name,
-                faculty_name,
+                subject_name,   // ✅ FROM FRONTEND
+                faculty_name,   // ✅ FROM FRONTEND
                 "present",
             ]
         );
 
-        // 🔥 ADD THIS BLOCK ONLY
-        io.to(lecture_id).emit("attendance_update", {
-            student_id: studentId,
-            subject_name: subject_name,
-            faculty_name: faculty_name,
-            time: new Date()
-        });
         return res.status(201).json({
             success: true,
             message: "Attendance marked successfully",
